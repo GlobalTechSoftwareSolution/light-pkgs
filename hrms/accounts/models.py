@@ -1,6 +1,11 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.utils import timezone
 
+
+# =====================
+# Custom User Manager
+# =====================
 class UserManager(BaseUserManager):
     def create_user(self, email, role, password=None, **extra_fields):
         if not email:
@@ -21,6 +26,9 @@ class UserManager(BaseUserManager):
         return self.create_user(email, role, password, **extra_fields)
 
 
+# =====================
+# User Model
+# =====================
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(primary_key=True, max_length=254)
     role = models.CharField(max_length=30)
@@ -33,14 +41,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     def __str__(self):
-        return self.email
+        return f"{self.email} ({self.role})"
 
 
+# =====================
+# HR Model
+# =====================
 class HR(models.Model):
     email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
     fullname = models.CharField(max_length=255)
     age = models.IntegerField(null=True, blank=True)
-    dob = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     department = models.CharField(max_length=100, null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
@@ -50,14 +60,16 @@ class HR(models.Model):
     profile_picture = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
-        return self.fullname
+        return f"{self.fullname} (HR)"
 
 
+# =====================
+# CEO Model
+# =====================
 class CEO(models.Model):
     email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
     fullname = models.CharField(max_length=255)
     age = models.IntegerField(null=True, blank=True)
-    dob = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     office_address = models.TextField(null=True, blank=True)
     date_of_birth = models.DateField(null=True, blank=True)
@@ -67,14 +79,16 @@ class CEO(models.Model):
     profile_picture = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
-        return self.fullname
+        return f"{self.fullname} (CEO)"
 
 
+# =====================
+# Manager Model
+# =====================
 class Manager(models.Model):
     email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
     fullname = models.CharField(max_length=255)
     age = models.IntegerField(null=True, blank=True)
-    dob = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     department = models.CharField(max_length=100, null=True, blank=True)
     team_size = models.IntegerField(null=True, blank=True)
@@ -85,14 +99,16 @@ class Manager(models.Model):
     profile_picture = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
-        return self.fullname
+        return f"{self.fullname} (Manager)"
 
 
+# =====================
+# Employee Model
+# =====================
 class Employee(models.Model):
     email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
-    name = models.CharField(max_length=255)
+    fullname = models.CharField(max_length=255)
     age = models.IntegerField(null=True, blank=True)
-    dob = models.DateField(null=True, blank=True)
     phone = models.CharField(max_length=20, null=True, blank=True)
     department = models.CharField(max_length=100, null=True, blank=True)
     designation = models.CharField(max_length=100, null=True, blank=True)
@@ -103,8 +119,12 @@ class Employee(models.Model):
     profile_picture = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
-        return self.name
+        return f"{self.fullname} (Employee)"
 
+
+# =====================
+# Admin Model
+# =====================
 class Admin(models.Model):
     email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
     fullname = models.CharField(max_length=255)
@@ -113,21 +133,47 @@ class Admin(models.Model):
     profile_picture = models.CharField(max_length=200, null=True, blank=True)
 
     def __str__(self):
-        return self.fullname
-    
+        return f"{self.fullname} (Admin)"
+
+
+# =====================
+# Attendance Model
+# =====================
 from django.db import models
 from django.utils import timezone
 
+
 class Attendance(models.Model):
-    username = models.CharField(max_length=100)  # detected from image
-    role = models.CharField(max_length=30)      # fetched from User table
+    email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
     date = models.DateField(default=timezone.localdate)
     check_in = models.TimeField(null=True, blank=True)
     check_out = models.TimeField(null=True, blank=True)
 
     class Meta:
-        unique_together = ('username', 'date')
+        constraints = [
+            models.UniqueConstraint(fields=['email', 'date'], name='unique_attendance_per_day')
+        ]
         ordering = ['-date']
 
     def __str__(self):
-        return f"{self.username} ({self.role}) - {self.date}"
+        return f"{self.email.email} ({self.email.role}) - {self.date}"
+
+from django.db import models
+from django.utils import timezone
+from accounts.models import User  # Adjust import if needed
+
+class Leave(models.Model):
+    email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
+    department = models.CharField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    leave_type = models.CharField(max_length=50, null=True, blank=True)  # e.g. Sick, Casual, Paid
+    reason = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, default='Pending')  # e.g. Pending, Approved, Rejected
+    applied_on = models.DateField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-applied_on']
+
+    def __str__(self):
+        return f"{self.email.email} - {self.department} Leave from {self.start_date} to {self.end_date} [{self.status}]"

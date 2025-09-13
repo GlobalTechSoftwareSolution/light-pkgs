@@ -20,13 +20,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!zzj@lqh48sro#=e-3*k%=ylm7mwt-8!-*pwpj9f2*kti6lxt+'
+SECRET_KEY = 'django-insecure-p%%sozx&%uf%86nn4crj^5dbyh5(oo+j)@u8oov^+vker+ub$m'
+# SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+# DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ['true', '1', 't']
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["*"]
+# ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 
@@ -42,6 +44,21 @@ INSTALLED_APPS = [
     'accounts',
 ]
 
+# Set custom user model
+AUTH_USER_MODEL = 'accounts.User'
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# Optionally configure REST framework authentication
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ]
+}
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -50,6 +67,27 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+]
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # for local frontend dev
+    "https://hrms-backend-44ik.onrender.com",  # your live backend domain
+    # Add your actual Next.js frontend URL here
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'accept',
+    'ngrok-skip-browser-warning',  # add this
+]
+
+# CSRF trusted origins
+CSRF_TRUSTED_ORIGINS = [
+    'https://hrms-backend-44ik.onrender.com',
 ]
 
 ROOT_URLCONF = 'hrms.urls'
@@ -86,8 +124,6 @@ DATABASES = {
     }
 }
 
-AUTH_USER_MODEL = 'accounts.User'
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -123,9 +159,17 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+DEBUG = True
+
+# SUPABASE_URL = os.getenv('SUPABASE_URL')
+# SUPABASE_SERVICE_KEY = os.getenv('SUPABASE_SERVICE_KEY')

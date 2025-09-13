@@ -13,27 +13,26 @@
     <!-- Canvas to show captured photo -->
     <canvas id="canvas" width="640" height="480" style="display:none;"></canvas>
 
-    <!-- Take photo button -->
-    <br>
-    <button id="snap">Take Photo</button>
-
     <p id="result"></p>
 
     <script>
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const snap = document.getElementById('snap');
         const result = document.getElementById('result');
 
         // Access webcam
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(stream => { 
                 video.srcObject = stream;
+
+                // Wait 2 seconds, then capture automatically
+                setTimeout(() => {
+                    captureAndSend();
+                }, 2000);
             })
             .catch(err => console.error("Error accessing webcam:", err));
 
-        snap.addEventListener("click", () => {
-            // Capture frame to canvas
+        function captureAndSend() {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
@@ -44,7 +43,7 @@
             video.style.display = 'none';
             canvas.style.display = 'block';
 
-            // Send photo to Django
+            // Convert to base64 and send to Django
             const dataUrl = canvas.toDataURL('image/jpeg');
             fetch("{% url 'recognize_face' %}", {
                 method: 'POST',
@@ -57,8 +56,9 @@
             .then(response => response.json())
             .then(data => {
                 result.textContent = `${data.name} - ${data.confidence.toFixed(2)}%`;
-            });
-        });
+            })
+            .catch(err => console.error("Error during fetch:", err));
+        }
     </script>
 </body>
 </html>
