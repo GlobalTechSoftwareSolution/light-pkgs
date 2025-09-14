@@ -1,21 +1,22 @@
 import os
 import json
+import base64
+import numpy as np
+import face_recognition
+from PIL import Image
+from io import BytesIO
+from rest_framework import viewsets
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, generics
 from rest_framework.decorators import api_view
-from django.contrib.auth import authenticate
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.utils import timezone
 from django.shortcuts import render
+from django.contrib.auth import authenticate
+from django.views.decorators.csrf import csrf_exempt
 from .models import User, CEO, HR, Manager, Employee, Attendance, Admin
 from .serializers import UserSerializer, CEOSerializer, HRSerializer, ManagerSerializer, EmployeeSerializer, SuperUserCreateSerializer, UserRegistrationSerializer, AdminSerializer
-from PIL import Image
-import face_recognition
-import numpy as np
-import base64
-from io import BytesIO
 
 class SignupView(APIView):
     def post(self, request):
@@ -42,37 +43,6 @@ class LoginView(APIView):
             serializer = UserSerializer(user)
             return Response({'user': serializer.data, 'message': 'Login successful'}, status=status.HTTP_200_OK)
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-
-class UserListView(APIView):
-    def get(self, request):
-        users = User.objects.all()
-        serializer = UserSerializer(users, many=True)  # many=True is critical
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-# CEO Views
-class CEOListCreateView(generics.ListCreateAPIView):
-    queryset = CEO.objects.all()
-    serializer_class = CEOSerializer
-
-# HR Views
-class HRListCreateView(generics.ListCreateAPIView):
-    queryset = HR.objects.all()
-    serializer_class = HRSerializer
-
-# Manager Views
-class ManagerListCreateView(generics.ListCreateAPIView):
-    queryset = Manager.objects.all()
-    serializer_class = ManagerSerializer
-
-# Employee Views
-class EmployeeListCreateView(generics.ListCreateAPIView):
-    queryset = Employee.objects.all()
-    serializer_class = EmployeeSerializer
-
-# Admin Views
-class AdminListCreateView(generics.ListCreateAPIView):
-    queryset = Admin.objects.all()
-    serializer_class = AdminSerializer
 
 class CreateSuperUserView(APIView):
     def post(self, request):
@@ -114,7 +84,6 @@ def reject_user(request):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-
 # =====================
 # Load known faces
 # =====================
@@ -129,23 +98,22 @@ for filename in os.listdir(KNOWN_FACES_DIR):
         encodings = face_recognition.face_encodings(image)
         if encodings:
             known_face_encodings.append(encodings[0])
-            username, _ = os.path.splitext(filename)  # e.g., Abhi from Abhi.jpg
+            username, _ = os.path.splitext(filename)
             known_face_names.append(username.lower())
             print(f"Loaded known face: {username.lower()}")
 
 # =====================
-# Helper function: get email by username with partial match
+# Helper: get email by username (partial match)
 # =====================
 def get_email_by_username(username):
     username = username.lower()
     for model in [HR, Employee, CEO, Manager, Admin]:
-        all_fullnames = list(model.objects.values_list('fullname', flat=True))
-        print(f"Checking in {model.__name__}: {all_fullnames}")
-        objs = model.objects.filter(fullname__icontains=username)
-        if objs.exists():
-            email = objs.first().email.email
-            print(f"[get_email_by_username] Found email {email} for username {username} in {model.__name__}")
-            return email
+        for obj in model.objects.all():
+            full_name_lower = obj.fullname.lower()
+            if any(part.startswith(username) for part in full_name_lower.split()):
+                email = obj.email.email
+                print(f"[get_email_by_username] Found email {email} for username {username} in {model.__name__}")
+                return email
     print(f"[get_email_by_username] No email found for username {username}")
     return None
 
@@ -164,7 +132,7 @@ def is_email_exists(email):
     return exists
 
 # =====================
-# Mark attendance by email with User instance assignment
+# Mark attendance by email
 # =====================
 def mark_attendance_by_email(email_str):
     if not is_email_exists(email_str):
@@ -182,7 +150,7 @@ def mark_attendance_by_email(email_str):
         return None
 
     try:
-        attendance = Attendance.objects.get(email=user_instance, date=today)
+        attendance = Attendance.objects.get(email=user_instance)
         if attendance.check_out is None:
             attendance.check_out = now_time
             attendance.save()
@@ -190,7 +158,7 @@ def mark_attendance_by_email(email_str):
     except Attendance.DoesNotExist:
         try:
             attendance = Attendance.objects.create(
-                email=user_instance,  # Assign User instance
+                email=user_instance,  # email is PK
                 date=today,
                 check_in=now_time
             )
@@ -202,63 +170,68 @@ def mark_attendance_by_email(email_str):
     return attendance
 
 # =====================
-# Face recognition page render
+# Render face recognition page
 # =====================
 def face_recognition_page(request):
     return render(request, "face_recognition.html")
 
 # =====================
-# Face recognition API view
+# Face recognition API
 # =====================
+@csrf_exempt
 def recognize_face(request):
-    if request.method == "POST":
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid method"}, status=405)
+
+    try:
         data = json.loads(request.body)
         image_data = data.get("image", "")
         if not image_data:
             return JsonResponse({"error": "No image data provided"}, status=400)
 
-        image_data = image_data.split(",")[1]  # strip data header
+        image_data = image_data.split(",")[1]  # Remove base64 header
         image_bytes = base64.b64decode(image_data)
         img = Image.open(BytesIO(image_bytes)).convert('RGB')
         img_np = np.array(img)
+    except Exception as e:
+        return JsonResponse({"error": f"Failed to process image: {e}"}, status=400)
 
-        face_encodings = face_recognition.face_encodings(img_np)
+    face_encodings = face_recognition.face_encodings(img_np)
 
-        username = "No face detected"
-        email = None
-        confidence = 0
-        attendance = None
+    username = "No face detected"
+    email = None
+    confidence = 0
+    attendance = None
 
-        if face_encodings:
-            face_encoding = face_encodings[0]
-            distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-            best_match_index = np.argmin(distances)
-            best_distance = distances[best_match_index]
+    if face_encodings:
+        face_encoding = face_encodings[0]
+        distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+        best_match_index = np.argmin(distances)
+        best_distance = distances[best_match_index]
 
-            if best_distance < 0.6:
-                username = known_face_names[best_match_index]
-                email = get_email_by_username(username)
-                confidence = round((1 - best_distance) * 100, 2)
-            else:
-                username = "Unknown"
-                email = None
-
-        print(f"[recognize_face] Username: {username}, Email: {email}, Confidence: {confidence}%")
-
-        if email:
-            attendance = mark_attendance_by_email(email)
+        if best_distance < 0.6:
+            username = known_face_names[best_match_index]
+            email = get_email_by_username(username)
+            confidence = round((1 - best_distance) * 100, 2)
         else:
-            print("[recognize_face] No valid email found; attendance not marked.")
+            username = "Unknown"
+            email = None
 
-        return JsonResponse({
-            "username": username,
-            "email": email,
-            "confidence": f"{confidence}%" if email else "",
-            "check_in": str(attendance.check_in) if attendance else "",
-            "check_out": str(attendance.check_out) if attendance else ""
-        })
+    print(f"[recognize_face] Username: {username}, Email: {email}, Confidence: {confidence}%")
+
+    if email:
+        attendance = mark_attendance_by_email(email)
     else:
-        return JsonResponse({"error": "Invalid method"}, status=405)
+        print("[recognize_face] No valid email found; attendance not marked.")
+
+    return JsonResponse({
+        "username": username,
+        "email": email,
+        "confidence": f"{confidence}%" if email else "",
+        "check_in": str(attendance.check_in) if attendance else "",
+        "check_out": str(attendance.check_out) if attendance else ""
+    })
+
 
 # =====================
 # Today attendance view
@@ -295,7 +268,6 @@ def handle_put(request, ModelClass, SerializerClass):
         return JsonResponse(serializer.data)
     return JsonResponse(serializer.errors, status=400)
 
-
 # Helper function to handle DELETE
 def handle_delete(request, ModelClass):
     try:
@@ -322,59 +294,37 @@ def handle_delete(request, ModelClass):
     except ModelClass.DoesNotExist:
         return JsonResponse({"error": f"{ModelClass.__name__} not found"}, status=404)
 
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    lookup_field = 'email'
 
-@csrf_exempt
-def ceo_list(request):
-    if request.method == "GET":
-        ceos = CEO.objects.all()
-        data = CEOSerializer(ceos, many=True).data
-        return JsonResponse(data, safe=False)
-    elif request.method == "PUT":
-        return handle_put(request, CEO, CEOSerializer)
-    elif request.method == "DELETE":
-        return handle_delete(request, CEO)
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return UserRegistrationSerializer
+        return UserSerializer
 
-@csrf_exempt
-def hr_list(request):
-    if request.method == "GET":
-        hrs = HR.objects.all()
-        data = HRSerializer(hrs, many=True).data
-        return JsonResponse(data, safe=False)
-    elif request.method == "PUT":
-        return handle_put(request, HR, HRSerializer)
-    elif request.method == "DELETE":
-        return handle_delete(request, HR)
+class EmployeeViewSet(viewsets.ModelViewSet):
+    queryset = Employee.objects.all()
+    serializer_class = EmployeeSerializer
+    lookup_field = 'email'
 
-@csrf_exempt
-def manager_list(request):
-    if request.method == "GET":
-        managers = Manager.objects.all()
-        data = ManagerSerializer(managers, many=True).data
-        return JsonResponse(data, safe=False)
-    elif request.method == "PUT":
-        return handle_put(request, Manager, ManagerSerializer)
-    elif request.method == "DELETE":
-        return handle_delete(request, Manager)
+class HRViewSet(viewsets.ModelViewSet):
+    queryset = HR.objects.all()
+    serializer_class = HRSerializer
+    lookup_field = 'email'
 
-@csrf_exempt
-def employee_list(request):
-    if request.method == "GET":
-        employees = Employee.objects.all()
-        data = EmployeeSerializer(employees, many=True).data
-        return JsonResponse(data, safe=False)
-    elif request.method == "PUT":
-        return handle_put(request, Employee, EmployeeSerializer)
-    elif request.method == "DELETE":
-        return handle_delete(request, Employee)
+class ManagerViewSet(viewsets.ModelViewSet):
+    queryset = Manager.objects.all()
+    serializer_class = ManagerSerializer
+    lookup_field = 'email'
 
-@csrf_exempt
-def admin_list(request):
-    if request.method == "GET":
-        admins = Admin.objects.all()
-        data = AdminSerializer(admins, many=True).data
-        return JsonResponse(data, safe=False)
-    elif request.method == "PUT":
-        return handle_put(request, Admin, AdminSerializer)
-    elif request.method == "DELETE":
-        return handle_delete(request, Admin)
+class AdminViewSet(viewsets.ModelViewSet):
+    queryset = Admin.objects.all()
+    serializer_class = AdminSerializer
+    lookup_field = 'email'
+
+class CEOViewSet(viewsets.ModelViewSet):
+    queryset = CEO.objects.all()
+    serializer_class = CEOSerializer
+    lookup_field = 'email'
 

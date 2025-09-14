@@ -2,7 +2,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
 from django.utils import timezone
 
-
 # =====================
 # Custom User Manager
 # =====================
@@ -144,19 +143,22 @@ from django.utils import timezone
 
 
 class Attendance(models.Model):
-    email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
+    email = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        to_field='email',
+        primary_key=True   # email is the only primary key
+    )
     date = models.DateField(default=timezone.localdate)
     check_in = models.TimeField(null=True, blank=True)
     check_out = models.TimeField(null=True, blank=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['email', 'date'], name='unique_attendance_per_day')
-        ]
         ordering = ['-date']
 
     def __str__(self):
         return f"{self.email.email} ({self.email.role}) - {self.date}"
+
 
 from django.db import models
 from django.utils import timezone
