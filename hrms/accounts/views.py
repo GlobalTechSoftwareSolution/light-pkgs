@@ -87,7 +87,7 @@ def reject_user(request):
 # =====================
 # Load known faces
 # =====================
-KNOWN_FACES_DIR = 'C:/Users/Abhishek/Desktop/hrms_backend/hrms/images'
+KNOWN_FACES_DIR = 'hrms/images'
 known_face_encodings = []
 known_face_names = []
 
