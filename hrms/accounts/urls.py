@@ -1,7 +1,7 @@
 from django.urls import path
 from accounts.views import (LoginView, CreateSuperUserView, SignupView, approve_user, reject_user,
                              face_recognition_page, recognize_face, today_attendance, 
-                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet, apply_leave, update_leave_status, leaves_today, create_payroll, update_payroll_status, get_payroll)
+                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet, apply_leave, update_leave_status, leaves_today, list_leaves, create_payroll, update_payroll_status, get_payroll, list_payrolls)
 
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='user-signup'),
@@ -48,11 +48,12 @@ urlpatterns = [
     path('ceos/<str:email>/', CEOViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='ceo-detail'),
 
     path('apply_leave/', apply_leave, name='apply_leave'),
-    # Use <path:email> instead of <str:email> to allow @ and .
     path('update_leave/<path:email>/', update_leave_status, name='update_leave_status'),
     path('leaves_today/', leaves_today, name='leaves_today'),
+    path('list_leaves/', list_leaves, name='list_leaves'),
 
     path('create_payroll/', create_payroll, name='create_payroll'),
     path('update_payroll/<path:email>/', update_payroll_status, name='update_payroll_status'),
     path('get_payroll/<path:email>/', get_payroll, name='get_payroll'),
+    path('list_payrolls/', list_payrolls, name='list_payrolls'),
 ]

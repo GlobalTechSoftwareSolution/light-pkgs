@@ -16,6 +16,7 @@ from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render, get_object_or_404
+from django.views.decorators.http import require_GET
 from .models import User, CEO, HR, Manager, Employee, Attendance, Admin, Leave, Payroll
 from .serializers import UserSerializer, CEOSerializer, HRSerializer, ManagerSerializer, EmployeeSerializer, SuperUserCreateSerializer, UserRegistrationSerializer, AdminSerializer
 
@@ -435,6 +436,26 @@ def leaves_today(request):
 
     return JsonResponse({"leaves_today": result}, status=200)
 
+@require_GET
+def list_leaves(request):
+    """List all leaves"""
+    leaves = Leave.objects.all().order_by('-applied_on')
+
+    result = []
+    for leave in leaves:
+        result.append({
+            "email": leave.email.email,
+            "department": leave.department,
+            "start_date": str(leave.start_date),
+            "end_date": str(leave.end_date),
+            "leave_type": leave.leave_type,
+            "reason": leave.reason,
+            "status": leave.status,
+            "applied_on": str(leave.applied_on)
+        })
+
+    return JsonResponse({"leaves": result}, status=200)
+
 @csrf_exempt
 def create_payroll(request):
     """Create payroll for an employee"""
@@ -548,3 +569,26 @@ def get_payroll(request, email):
             "pay_date": str(payroll.pay_date)
         }
     }, status=200)
+
+@require_GET
+def list_payrolls(request):
+    """List all payrolls"""
+    payrolls = Payroll.objects.all().order_by('-pay_date')
+
+    result = []
+    for payroll in payrolls:
+        result.append({
+            "email": payroll.email.email,
+            "basic_salary": str(payroll.basic_salary),
+            "allowances": str(payroll.allowances),
+            "deductions": str(payroll.deductions),
+            "bonus": str(payroll.bonus),
+            "tax": str(payroll.tax),
+            "net_salary": str(payroll.net_salary),
+            "month": payroll.month,
+            "year": payroll.year,
+            "status": payroll.status,
+            "pay_date": str(payroll.pay_date)
+        })
+
+    return JsonResponse({"payrolls": result}, status=200)
