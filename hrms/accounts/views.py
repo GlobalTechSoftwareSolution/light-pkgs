@@ -15,6 +15,7 @@ from django.utils import timezone
 from django.shortcuts import render
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from .models import User, CEO, HR, Manager, Employee, Attendance, Admin
 from .serializers import UserSerializer, CEOSerializer, HRSerializer, ManagerSerializer, EmployeeSerializer, SuperUserCreateSerializer, UserRegistrationSerializer, AdminSerializer
 
@@ -87,20 +88,23 @@ def reject_user(request):
 # =====================
 # Load known faces
 # =====================
-KNOWN_FACES_DIR = 'hrms/images'
+KNOWN_FACES_DIR = os.path.join(settings.BASE_DIR, "images")
 known_face_encodings = []
 known_face_names = []
 
-for filename in os.listdir(KNOWN_FACES_DIR):
-    if filename.lower().endswith(('.jpg', '.png')):
-        image_path = os.path.join(KNOWN_FACES_DIR, filename)
-        image = face_recognition.load_image_file(image_path)
-        encodings = face_recognition.face_encodings(image)
-        if encodings:
-            known_face_encodings.append(encodings[0])
-            username, _ = os.path.splitext(filename)
-            known_face_names.append(username.lower())
-            print(f"Loaded known face: {username.lower()}")
+if os.path.exists(KNOWN_FACES_DIR):
+    for filename in os.listdir(KNOWN_FACES_DIR):
+        if filename.lower().endswith(('.jpg', '.png')):
+            image_path = os.path.join(KNOWN_FACES_DIR, filename)
+            image = face_recognition.load_image_file(image_path)
+            encodings = face_recognition.face_encodings(image)
+            if encodings:
+                known_face_encodings.append(encodings[0])
+                username, _ = os.path.splitext(filename)
+                known_face_names.append(username.lower())
+                print(f"Loaded known face: {username.lower()}")
+else:
+    print(f"[WARNING] Known faces directory {KNOWN_FACES_DIR} not found. Skipping face loading.")
 
 # =====================
 # Helper: get email by username (partial match)
@@ -112,7 +116,7 @@ def get_email_by_username(username):
             full_name_lower = obj.fullname.lower()
             if any(part.startswith(username) for part in full_name_lower.split()):
                 email = obj.email.email
-                print(f"[get_email_by_username] Found email {email} for username {username} in {model.__name__}")
+                print(f"[get_email_by_username] Found email {email} for username {username} in {model._name_}")
                 return email
     print(f"[get_email_by_username] No email found for username {username}")
     return None
@@ -261,7 +265,7 @@ def handle_put(request, ModelClass, SerializerClass):
             return JsonResponse({"error": "Email field is required"}, status=400)
         instance = ModelClass.objects.get(email=email)
     except ModelClass.DoesNotExist:
-        return JsonResponse({"error": f"{ModelClass.__name__} not found"}, status=404)
+        return JsonResponse({"error": f"{ModelClass._name_} not found"}, status=404)
     serializer = SerializerClass(instance, data=data, partial=True)  # partial=True allows partial updates
     if serializer.is_valid():
         serializer.save()
@@ -279,7 +283,7 @@ def handle_delete(request, ModelClass):
         # Get the instance in role table
         instance = ModelClass.objects.get(email=email)
         instance.delete()
-        print(f"Deleted {ModelClass.__name__} record with email {email}")
+        print(f"Deleted {ModelClass._name_} record with email {email}")
         
         # Also delete corresponding User record
         from accounts.models import User  # import User model
@@ -290,9 +294,9 @@ def handle_delete(request, ModelClass):
         except User.DoesNotExist:
             print(f"No User record found to delete for email {email}")
         
-        return JsonResponse({"message": f"{ModelClass.__name__} and User deleted successfully"})
+        return JsonResponse({"message": f"{ModelClass._name_} and User deleted successfully"})
     except ModelClass.DoesNotExist:
-        return JsonResponse({"error": f"{ModelClass.__name__} not found"}, status=404)
+        return JsonResponse({"error": f"{ModelClass._name_} not found"}, status=404)
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
@@ -327,4 +331,3 @@ class CEOViewSet(viewsets.ModelViewSet):
     queryset = CEO.objects.all()
     serializer_class = CEOSerializer
     lookup_field = 'email'
-
