@@ -138,8 +138,6 @@ class Admin(models.Model):
 # =====================
 # Attendance Model
 # =====================
-from django.db import models
-from django.utils import timezone
 
 
 class Attendance(models.Model):
@@ -159,11 +157,6 @@ class Attendance(models.Model):
     def __str__(self):
         return f"{self.email.email} ({self.email.role}) - {self.date}"
 
-
-from django.db import models
-from django.utils import timezone
-from accounts.models import User  # Adjust import if needed
-
 class Leave(models.Model):
     email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
     department = models.CharField(max_length=100)
@@ -179,3 +172,33 @@ class Leave(models.Model):
 
     def __str__(self):
         return f"{self.email.email} - {self.department} Leave from {self.start_date} to {self.end_date} [{self.status}]"
+
+class Payroll(models.Model):
+    email = models.OneToOneField(User, on_delete=models.CASCADE, to_field='email', primary_key=True)
+    basic_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    allowances = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    bonus = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    tax = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    net_salary = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    pay_date = models.DateField(default=timezone.localdate)
+    month = models.CharField(max_length=20)   # e.g. "September"
+    year = models.IntegerField(default=timezone.now().year)
+
+    status = models.CharField(max_length=20, choices=[
+        ('Pending', 'Pending'),
+        ('Paid', 'Paid'),
+        ('Failed', 'Failed'),
+    ], default='Pending')
+
+    class Meta:
+        ordering = ['-pay_date']
+        unique_together = ('email', 'month', 'year')  # Prevent duplicate payroll for same month/year
+
+    def __str__(self):
+        return f"Payroll for {self.email.email} - {self.month} {self.year}"
+
+    def save(self, *args, **kwargs):
+        # Calculate net salary automatically
+        self.net_salary = (self.basic_salary + self.allowances + self.bonus) - (self.deductions + self.tax)
+        super().save(*args, **kwargs)

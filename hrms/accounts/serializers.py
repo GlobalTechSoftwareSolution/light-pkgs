@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, CEO, HR, Manager, Employee, Admin
+from .models import User, CEO, HR, Manager, Employee, Admin, Leave
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
 
@@ -77,3 +77,10 @@ class SuperUserCreateSerializer(serializers.Serializer):
             role='admin'  # Default superuser role, adapt if needed
         )
         return user
+
+
+class LeaveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Leave
+        fields = '__all__'
+        read_only_fields = ['status', 'applied_on']   # status set to Pending automatically

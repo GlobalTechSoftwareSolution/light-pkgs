@@ -1,7 +1,7 @@
 from django.urls import path
 from accounts.views import (LoginView, CreateSuperUserView, SignupView, approve_user, reject_user,
-                            #  face_recognition_page, recognize_face, today_attendance, 
-                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet )
+                             face_recognition_page, recognize_face, today_attendance, 
+                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet, apply_leave, update_leave_status, leaves_today )
 
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='user-signup'),
@@ -18,10 +18,10 @@ urlpatterns = [
     path('approve/', approve_user),
     path('reject/', reject_user),
 
-    # path("attendance/", face_recognition_page, name="face_recognition_page"),
-    # path("recognize_face/", recognize_face, name="recognize_face"),
+    path("attendance/", face_recognition_page, name="face_recognition_page"),
+    path("recognize_face/", recognize_face, name="recognize_face"),
 
-    # path("today_attendance/", today_attendance, name="today_attendance"),
+    path("today_attendance/", today_attendance, name="today_attendance"),
 
     # Employee
     path('users/', UserViewSet.as_view({'get': 'list', 'post': 'create'}), name='employee-list'),
@@ -46,4 +46,9 @@ urlpatterns = [
     # CEO
     path('ceos/', CEOViewSet.as_view({'get': 'list', 'post': 'create'}), name='ceo-list'),
     path('ceos/<str:email>/', CEOViewSet.as_view({'get': 'retrieve', 'put': 'update', 'delete': 'destroy'}), name='ceo-detail'),
+
+    path('apply_leave/', apply_leave, name='apply_leave'),
+    # Use <path:email> instead of <str:email> to allow @ and .
+    path('update_leave/<path:email>/', update_leave_status, name='update_leave_status'),
+    path('leaves_today/', leaves_today, name='leaves_today'),
 ]

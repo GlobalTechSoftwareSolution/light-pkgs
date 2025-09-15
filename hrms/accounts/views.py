@@ -5,18 +5,18 @@ import numpy as np
 import face_recognition
 from PIL import Image
 from io import BytesIO
-from rest_framework import viewsets
 from rest_framework import status
+from rest_framework import viewsets
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from django.http import JsonResponse
+from django.conf import settings
 from django.utils import timezone
-from django.shortcuts import render
+from django.http import JsonResponse
 from django.contrib.auth import authenticate
 from django.views.decorators.csrf import csrf_exempt
-from django.conf import settings
-from .models import User, CEO, HR, Manager, Employee, Attendance, Admin
+from django.shortcuts import render, get_object_or_404
+from .models import User, CEO, HR, Manager, Employee, Attendance, Admin, Leave, Payroll
 from .serializers import UserSerializer, CEOSerializer, HRSerializer, ManagerSerializer, EmployeeSerializer, SuperUserCreateSerializer, UserRegistrationSerializer, AdminSerializer
 
 class SignupView(APIView):
@@ -331,3 +331,110 @@ class CEOViewSet(viewsets.ModelViewSet):
     queryset = CEO.objects.all()
     serializer_class = CEOSerializer
     lookup_field = 'email'
+
+@csrf_exempt
+def apply_leave(request):
+    """Employee applies for leave. If leave already exists, return error."""
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        email = data.get("email")
+        user = get_object_or_404(User, email=email)
+
+        # Check if leave already exists for this user
+        if Leave.objects.filter(email=user).exists():
+            return JsonResponse({"error": "You already have a leave request. Wait for it to be processed."}, status=400)
+
+        leave = Leave.objects.create(
+            email=user,
+            department=data.get("department"),
+            start_date=data.get("start_date"),
+            end_date=data.get("end_date"),
+            leave_type=data.get("leave_type", ""),
+            reason=data.get("reason", ""),
+            status="Pending"
+        )
+
+        return JsonResponse({
+            "message": "Leave request submitted successfully",
+            "leave": {
+                "email": leave.email.email,
+                "department": leave.department,
+                "start_date": str(leave.start_date),
+                "end_date": str(leave.end_date),
+                "leave_type": leave.leave_type,
+                "reason": leave.reason,
+                "status": leave.status
+            }
+        }, status=201)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+def update_leave_status(request, email):
+    """Manager approves or rejects leave."""
+    if request.method != "PATCH":
+        return JsonResponse({"error": "Only PATCH method allowed"}, status=405)
+
+    try:
+        user = get_object_or_404(User, email=email)
+        leave = get_object_or_404(Leave, email=user)
+
+        data = json.loads(request.body)
+        new_status = data.get("status")
+
+        if new_status not in ["Approved", "Rejected"]:
+            return JsonResponse({"error": "Invalid status. Must be Approved or Rejected."}, status=400)
+
+        leave.status = new_status
+        leave.save()
+
+        return JsonResponse({
+            "message": f"Leave request {new_status}",
+            "leave": {
+                "email": leave.email.email,
+                "department": leave.department,
+                "start_date": str(leave.start_date),
+                "end_date": str(leave.end_date),
+                "leave_type": leave.leave_type,
+                "reason": leave.reason,
+                "status": leave.status
+            }
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+    
+from django.utils import timezone
+from django.http import JsonResponse
+from .models import Leave
+
+def leaves_today(request):
+    """List all employees on leave today"""
+    if request.method != "GET":
+        return JsonResponse({"error": "Only GET method allowed"}, status=405)
+
+    today = timezone.localdate()
+    leaves = Leave.objects.filter(
+        status="Approved",
+        start_date__lte=today,
+        end_date__gte=today
+    )
+
+    result = []
+    for leave in leaves:
+        result.append({
+            "email": leave.email.email,
+            "department": leave.department,
+            "start_date": str(leave.start_date),
+            "end_date": str(leave.end_date),
+            "leave_type": leave.leave_type,
+            "reason": leave.reason,
+            "status": leave.status
+        })
+
+    return JsonResponse({"leaves_today": result}, status=200)
