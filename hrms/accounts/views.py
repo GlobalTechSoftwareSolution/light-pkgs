@@ -1,10 +1,10 @@
 import os
 import json
 import base64
-import numpy as np
-import face_recognition
-from PIL import Image
-from io import BytesIO
+# import numpy as np
+# import face_recognition
+# from PIL import Image
+# from io import BytesIO
 from rest_framework import viewsets
 from rest_framework import status
 from rest_framework.views import APIView
@@ -87,170 +87,170 @@ def reject_user(request):
 # =====================
 # Load known faces
 # =====================
-KNOWN_FACES_DIR = 'hrms/images'
-known_face_encodings = []
-known_face_names = []
+# KNOWN_FACES_DIR = 'hrms/images'
+# known_face_encodings = []
+# known_face_names = []
 
-for filename in os.listdir(KNOWN_FACES_DIR):
-    if filename.lower().endswith(('.jpg', '.png')):
-        image_path = os.path.join(KNOWN_FACES_DIR, filename)
-        image = face_recognition.load_image_file(image_path)
-        encodings = face_recognition.face_encodings(image)
-        if encodings:
-            known_face_encodings.append(encodings[0])
-            username, _ = os.path.splitext(filename)
-            known_face_names.append(username.lower())
-            print(f"Loaded known face: {username.lower()}")
+# for filename in os.listdir(KNOWN_FACES_DIR):
+#     if filename.lower().endswith(('.jpg', '.png')):
+#         image_path = os.path.join(KNOWN_FACES_DIR, filename)
+#         image = face_recognition.load_image_file(image_path)
+#         encodings = face_recognition.face_encodings(image)
+#         if encodings:
+#             known_face_encodings.append(encodings[0])
+#             username, _ = os.path.splitext(filename)
+#             known_face_names.append(username.lower())
+#             print(f"Loaded known face: {username.lower()}")
 
 # =====================
 # Helper: get email by username (partial match)
 # =====================
-def get_email_by_username(username):
-    username = username.lower()
-    for model in [HR, Employee, CEO, Manager, Admin]:
-        for obj in model.objects.all():
-            full_name_lower = obj.fullname.lower()
-            if any(part.startswith(username) for part in full_name_lower.split()):
-                email = obj.email.email
-                print(f"[get_email_by_username] Found email {email} for username {username} in {model.__name__}")
-                return email
-    print(f"[get_email_by_username] No email found for username {username}")
-    return None
+# def get_email_by_username(username):
+#     username = username.lower()
+#     for model in [HR, Employee, CEO, Manager, Admin]:
+#         for obj in model.objects.all():
+#             full_name_lower = obj.fullname.lower()
+#             if any(part.startswith(username) for part in full_name_lower.split()):
+#                 email = obj.email.email
+#                 print(f"[get_email_by_username] Found email {email} for username {username} in {model.__name__}")
+#                 return email
+#     print(f"[get_email_by_username] No email found for username {username}")
+#     return None
 
 # =====================
 # Check if email exists
 # =====================
-def is_email_exists(email):
-    exists = any([
-        HR.objects.filter(email=email).exists(),
-        Employee.objects.filter(email=email).exists(),
-        CEO.objects.filter(email=email).exists(),
-        Manager.objects.filter(email=email).exists(),
-        Admin.objects.filter(email=email).exists()
-    ])
-    print(f"[is_email_exists] Email {email} exists: {exists}")
-    return exists
+# def is_email_exists(email):
+#     exists = any([
+#         HR.objects.filter(email=email).exists(),
+#         Employee.objects.filter(email=email).exists(),
+#         CEO.objects.filter(email=email).exists(),
+#         Manager.objects.filter(email=email).exists(),
+#         Admin.objects.filter(email=email).exists()
+#     ])
+#     print(f"[is_email_exists] Email {email} exists: {exists}")
+#     return exists
 
 # =====================
 # Mark attendance by email
 # =====================
-def mark_attendance_by_email(email_str):
-    if not is_email_exists(email_str):
-        print(f"[mark_attendance_by_email] Email {email_str} not found in user models. Attendance not marked.")
-        return None
+# def mark_attendance_by_email(email_str):
+#     if not is_email_exists(email_str):
+#         print(f"[mark_attendance_by_email] Email {email_str} not found in user models. Attendance not marked.")
+#         return None
 
-    today = timezone.localdate()
-    now_time = timezone.localtime().time()
-    print(f"[mark_attendance_by_email] Processing attendance for {email_str} on {today} at {now_time}")
+#     today = timezone.localdate()
+#     now_time = timezone.localtime().time()
+#     print(f"[mark_attendance_by_email] Processing attendance for {email_str} on {today} at {now_time}")
 
-    try:
-        user_instance = User.objects.get(email=email_str)
-    except User.DoesNotExist:
-        print(f"[mark_attendance_by_email] User instance not found for email {email_str}")
-        return None
+#     try:
+#         user_instance = User.objects.get(email=email_str)
+#     except User.DoesNotExist:
+#         print(f"[mark_attendance_by_email] User instance not found for email {email_str}")
+#         return None
 
-    try:
-        attendance = Attendance.objects.get(email=user_instance)
-        if attendance.check_out is None:
-            attendance.check_out = now_time
-            attendance.save()
-            print(f"[mark_attendance_by_email] Updated check_out for {email_str} at {now_time}")
-    except Attendance.DoesNotExist:
-        try:
-            attendance = Attendance.objects.create(
-                email=user_instance,  # email is PK
-                date=today,
-                check_in=now_time
-            )
-            print(f"[mark_attendance_by_email] Created new attendance record for {email_str} at {now_time}")
-        except Exception as e:
-            print(f"[mark_attendance_by_email ERROR] Failed to save attendance for {email_str}: {e}")
-            return None
+#     try:
+#         attendance = Attendance.objects.get(email=user_instance)
+#         if attendance.check_out is None:
+#             attendance.check_out = now_time
+#             attendance.save()
+#             print(f"[mark_attendance_by_email] Updated check_out for {email_str} at {now_time}")
+#     except Attendance.DoesNotExist:
+#         try:
+#             attendance = Attendance.objects.create(
+#                 email=user_instance,  # email is PK
+#                 date=today,
+#                 check_in=now_time
+#             )
+#             print(f"[mark_attendance_by_email] Created new attendance record for {email_str} at {now_time}")
+#         except Exception as e:
+#             print(f"[mark_attendance_by_email ERROR] Failed to save attendance for {email_str}: {e}")
+#             return None
 
-    return attendance
+#     return attendance
 
 # =====================
 # Render face recognition page
 # =====================
-def face_recognition_page(request):
-    return render(request, "face_recognition.html")
+# def face_recognition_page(request):
+#     return render(request, "face_recognition.html")
 
 # =====================
 # Face recognition API
 # =====================
-@csrf_exempt
-def recognize_face(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Invalid method"}, status=405)
+# @csrf_exempt
+# def recognize_face(request):
+#     if request.method != "POST":
+#         return JsonResponse({"error": "Invalid method"}, status=405)
 
-    try:
-        data = json.loads(request.body)
-        image_data = data.get("image", "")
-        if not image_data:
-            return JsonResponse({"error": "No image data provided"}, status=400)
+#     try:
+#         data = json.loads(request.body)
+#         image_data = data.get("image", "")
+#         if not image_data:
+#             return JsonResponse({"error": "No image data provided"}, status=400)
 
-        image_data = image_data.split(",")[1]  # Remove base64 header
-        image_bytes = base64.b64decode(image_data)
-        img = Image.open(BytesIO(image_bytes)).convert('RGB')
-        img_np = np.array(img)
-    except Exception as e:
-        return JsonResponse({"error": f"Failed to process image: {e}"}, status=400)
+#         image_data = image_data.split(",")[1]  # Remove base64 header
+#         image_bytes = base64.b64decode(image_data)
+#         img = Image.open(BytesIO(image_bytes)).convert('RGB')
+#         img_np = np.array(img)
+#     except Exception as e:
+#         return JsonResponse({"error": f"Failed to process image: {e}"}, status=400)
 
-    face_encodings = face_recognition.face_encodings(img_np)
+#     face_encodings = face_recognition.face_encodings(img_np)
 
-    username = "No face detected"
-    email = None
-    confidence = 0
-    attendance = None
+#     username = "No face detected"
+#     email = None
+#     confidence = 0
+#     attendance = None
 
-    if face_encodings:
-        face_encoding = face_encodings[0]
-        distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-        best_match_index = np.argmin(distances)
-        best_distance = distances[best_match_index]
+#     if face_encodings:
+#         face_encoding = face_encodings[0]
+#         distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+#         best_match_index = np.argmin(distances)
+#         best_distance = distances[best_match_index]
 
-        if best_distance < 0.6:
-            username = known_face_names[best_match_index]
-            email = get_email_by_username(username)
-            confidence = round((1 - best_distance) * 100, 2)
-        else:
-            username = "Unknown"
-            email = None
+#         if best_distance < 0.6:
+#             username = known_face_names[best_match_index]
+#             email = get_email_by_username(username)
+#             confidence = round((1 - best_distance) * 100, 2)
+#         else:
+#             username = "Unknown"
+#             email = None
 
-    print(f"[recognize_face] Username: {username}, Email: {email}, Confidence: {confidence}%")
+#     print(f"[recognize_face] Username: {username}, Email: {email}, Confidence: {confidence}%")
 
-    if email:
-        attendance = mark_attendance_by_email(email)
-    else:
-        print("[recognize_face] No valid email found; attendance not marked.")
+#     if email:
+#         attendance = mark_attendance_by_email(email)
+#     else:
+#         print("[recognize_face] No valid email found; attendance not marked.")
 
-    return JsonResponse({
-        "username": username,
-        "email": email,
-        "confidence": f"{confidence}%" if email else "",
-        "check_in": str(attendance.check_in) if attendance else "",
-        "check_out": str(attendance.check_out) if attendance else ""
-    })
+#     return JsonResponse({
+#         "username": username,
+#         "email": email,
+#         "confidence": f"{confidence}%" if email else "",
+#         "check_in": str(attendance.check_in) if attendance else "",
+#         "check_out": str(attendance.check_out) if attendance else ""
+#     })
 
 
 # =====================
 # Today attendance view
 # =====================
-def today_attendance(request):
-    today = timezone.localdate()
-    attendances = Attendance.objects.filter(date=today)
+# def today_attendance(request):
+#     today = timezone.localdate()
+#     attendances = Attendance.objects.filter(date=today)
 
-    data = [
-        {
-            "email": att.email.email,
-            "date": att.date,
-            "check_in": str(att.check_in) if att.check_in else "",
-            "check_out": str(att.check_out) if att.check_out else ""
-        }
-        for att in attendances
-    ]
+#     data = [
+#         {
+#             "email": att.email.email,
+#             "date": att.date,
+#             "check_in": str(att.check_in) if att.check_in else "",
+#             "check_out": str(att.check_out) if att.check_out else ""
+#         }
+#         for att in attendances
+#     ]
 
-    return JsonResponse({"attendances": data})
+#     return JsonResponse({"attendances": data})
 
 # Helper function to handle PUT
 def handle_put(request, ModelClass, SerializerClass):

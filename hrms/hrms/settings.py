@@ -116,7 +116,7 @@ WSGI_APPLICATION = 'hrms.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'HOST': 'db.muvklgoxmujffuzjpjny.supabase.co',
+        'HOST': 'db.hdojjnserrsqekrpgyjr.supabase.co',
         'NAME': 'postgres',
         'USER': 'postgres',
         'PORT': '5432',
