@@ -1,7 +1,7 @@
 from django.urls import path
 from accounts.views import (LoginView, CreateSuperUserView, SignupView, approve_user, reject_user,
                              face_recognition_page, recognize_face, today_attendance, 
-                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet, apply_leave, update_leave_status, leaves_today )
+                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet, apply_leave, update_leave_status, leaves_today, create_payroll, update_payroll_status, get_payroll)
 
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='user-signup'),
@@ -51,4 +51,8 @@ urlpatterns = [
     # Use <path:email> instead of <str:email> to allow @ and .
     path('update_leave/<path:email>/', update_leave_status, name='update_leave_status'),
     path('leaves_today/', leaves_today, name='leaves_today'),
+
+    path('create_payroll/', create_payroll, name='create_payroll'),
+    path('update_payroll/<path:email>/', update_payroll_status, name='update_payroll_status'),
+    path('get_payroll/<path:email>/', get_payroll, name='get_payroll'),
 ]

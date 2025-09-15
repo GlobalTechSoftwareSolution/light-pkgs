@@ -408,10 +408,6 @@ def update_leave_status(request, email):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-    
-from django.utils import timezone
-from django.http import JsonResponse
-from .models import Leave
 
 def leaves_today(request):
     """List all employees on leave today"""
@@ -438,3 +434,117 @@ def leaves_today(request):
         })
 
     return JsonResponse({"leaves_today": result}, status=200)
+
+@csrf_exempt
+def create_payroll(request):
+    """Create payroll for an employee"""
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST method allowed"}, status=405)
+
+    try:
+        data = json.loads(request.body)
+        email = data.get("email")
+        user = get_object_or_404(User, email=email)
+
+        month = data.get("month")
+        year = data.get("year", timezone.now().year)
+
+        # Check if payroll already exists for this month/year
+        if Payroll.objects.filter(email=user, month=month, year=year).exists():
+            return JsonResponse({"error": "Payroll already exists for this month and year"}, status=400)
+
+        payroll = Payroll.objects.create(
+            email=user,
+            basic_salary=data.get("basic_salary", 0.00),
+            allowances=data.get("allowances", 0.00),
+            deductions=data.get("deductions", 0.00),
+            bonus=data.get("bonus", 0.00),
+            tax=data.get("tax", 0.00),
+            month=month,
+            year=year,
+            status=data.get("status", "Pending")
+        )
+
+        return JsonResponse({
+            "message": "Payroll created successfully",
+            "payroll": {
+                "email": payroll.email.email,
+                "basic_salary": str(payroll.basic_salary),
+                "allowances": str(payroll.allowances),
+                "deductions": str(payroll.deductions),
+                "bonus": str(payroll.bonus),
+                "tax": str(payroll.tax),
+                "net_salary": str(payroll.net_salary),
+                "month": payroll.month,
+                "year": payroll.year,
+                "status": payroll.status,
+                "pay_date": str(payroll.pay_date)
+            }
+        }, status=201)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+@csrf_exempt
+def update_payroll_status(request, email):
+    """Update payroll status (Pending, Paid, Failed)"""
+    if request.method != "PATCH":
+        return JsonResponse({"error": "Only PATCH method allowed"}, status=405)
+
+    try:
+        user = get_object_or_404(User, email=email)
+        payroll = get_object_or_404(Payroll, email=user)
+
+        data = json.loads(request.body)
+        new_status = data.get("status")
+        if new_status not in ["Pending", "Paid", "Failed"]:
+            return JsonResponse({"error": "Invalid status"}, status=400)
+
+        payroll.status = new_status
+        payroll.save()
+
+        return JsonResponse({
+            "message": f"Payroll status updated to {new_status}",
+            "payroll": {
+                "email": payroll.email.email,
+                "basic_salary": str(payroll.basic_salary),
+                "allowances": str(payroll.allowances),
+                "deductions": str(payroll.deductions),
+                "bonus": str(payroll.bonus),
+                "tax": str(payroll.tax),
+                "net_salary": str(payroll.net_salary),
+                "month": payroll.month,
+                "year": payroll.year,
+                "status": payroll.status,
+                "pay_date": str(payroll.pay_date)
+            }
+        }, status=200)
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+def get_payroll(request, email):
+    """Fetch payroll details for an employee"""
+    if request.method != "GET":
+        return JsonResponse({"error": "Only GET method allowed"}, status=405)
+
+    user = get_object_or_404(User, email=email)
+    payroll = get_object_or_404(Payroll, email=user)
+
+    return JsonResponse({
+        "payroll": {
+            "email": payroll.email.email,
+            "basic_salary": str(payroll.basic_salary),
+            "allowances": str(payroll.allowances),
+            "deductions": str(payroll.deductions),
+            "bonus": str(payroll.bonus),
+            "tax": str(payroll.tax),
+            "net_salary": str(payroll.net_salary),
+            "month": payroll.month,
+            "year": payroll.year,
+            "status": payroll.status,
+            "pay_date": str(payroll.pay_date)
+        }
+    }, status=200)
