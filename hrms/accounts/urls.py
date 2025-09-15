@@ -1,5 +1,7 @@
 from django.urls import path
-from accounts.views import (LoginView, CreateSuperUserView, SignupView, approve_user, reject_user, face_recognition_page, recognize_face, today_attendance, UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet )
+from accounts.views import (LoginView, CreateSuperUserView, SignupView, approve_user, reject_user,
+                            #  face_recognition_page, recognize_face, today_attendance, 
+                             UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet )
 
 urlpatterns = [
     path('signup/', SignupView.as_view(), name='user-signup'),
@@ -16,10 +18,10 @@ urlpatterns = [
     path('approve/', approve_user),
     path('reject/', reject_user),
 
-    path("attendance/", face_recognition_page, name="face_recognition_page"),
-    path("recognize_face/", recognize_face, name="recognize_face"),
+    # path("attendance/", face_recognition_page, name="face_recognition_page"),
+    # path("recognize_face/", recognize_face, name="recognize_face"),
 
-    path("today_attendance/", today_attendance, name="today_attendance"),
+    # path("today_attendance/", today_attendance, name="today_attendance"),
 
     # Employee
     path('users/', UserViewSet.as_view({'get': 'list', 'post': 'create'}), name='employee-list'),
