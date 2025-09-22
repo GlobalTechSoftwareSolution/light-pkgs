@@ -5,7 +5,8 @@ from rest_framework_simplejwt.views import (
 )
 from accounts.views import (
     LoginView, CreateSuperUserView, SignupView, approve_user, reject_user,
-    recognize_face, today_attendance, RegisterView, list_attendance,
+    # recognize_face, 
+    today_attendance, RegisterView, list_attendance,
     UserViewSet, EmployeeViewSet, HRViewSet, ManagerViewSet, AdminViewSet, CEOViewSet,
     apply_leave, update_leave_status, leaves_today, list_leaves,
     create_payroll, update_payroll_status, get_payroll, list_payrolls,
@@ -23,7 +24,7 @@ urlpatterns = [
     path('reject/', reject_user),
     # path("token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     # path("token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("recognize_face/", recognize_face, name="recognize_face"),
+    # path("recognize_face/", recognize_face, name="recognize_face"),
     path("today_attendance/", today_attendance, name="today_attendance"),
     path('list_attendance/', list_attendance, name='attendance-list'),
 
