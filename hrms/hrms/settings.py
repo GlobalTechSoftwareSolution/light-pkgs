@@ -128,17 +128,17 @@ WSGI_APPLICATION = 'hrms.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'HOST': 'db.wsrqysxopuffxwwrlgtx.supabase.co', #hrms
-        # 'HOST': 'db.ejanftgxxtlbadbqzdib.supabase.co', #test 
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PORT': '5432',
-        'PASSWORD': 'Bengaluru@2021'
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+#         'HOST': 'db.wsrqysxopuffxwwrlgtx.supabase.co', #hrms
+#         # 'HOST': 'db.ejanftgxxtlbadbqzdib.supabase.co', #test 
+#         'NAME': 'postgres',
+#         'USER': 'postgres',
+#         'PORT': '5432',
+#         'PASSWORD': 'Bengaluru@2021'
+#     }
+# }
 
 from pathlib import Path
 from django.urls import path
@@ -146,9 +146,9 @@ import os
 import dj_database_url
 from decouple import config
 
-# DATABASES = {
-#     'default': dj_database_url.parse(config('DATABASE_URL'))
-# }
+DATABASES = {
+    'default': dj_database_url.parse(config('DATABASE_URL'))
+}
 
 # import os
 # from pathlib import Path
